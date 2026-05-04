@@ -1,0 +1,61 @@
+name: Build and push
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # registry.redhat.io requires a service account token.
+      # Create one at https://access.redhat.com/terms-based-registry/
+      # Store as RH_REGISTRY_USER (e.g. "12345678|servicename") and RH_REGISTRY_TOKEN.
+      - name: Log in to registry.redhat.io
+        uses: docker/login-action@v3
+        with:
+          registry: registry.redhat.io
+          username: ${{ secrets.RH_REGISTRY_USER }}
+          password: ${{ secrets.RH_REGISTRY_TOKEN }}
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/kpiwko/notebooklm-mcp
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # RHSM_ORG = organization ID from https://console.redhat.com/insights/connector/activation-keys
+      # RHSM_KEY = activation key name from the same page
+      # These are passed as build secrets so subscription-manager can register inside the RUN layer
+      # if needed. Currently all packages install from UBI AppStream + EPEL without registration,
+      # so these are a no-op but kept for future packages that may require AppStream access.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            rhsm_org=${{ secrets.RHSM_ORG }}
+            rhsm_key=${{ secrets.RHSM_KEY }}
