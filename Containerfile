@@ -41,8 +41,7 @@ RUN pip install --upgrade pip uv \
     && pip install playwright \
     && playwright install chromium \
     && pip uninstall -y playwright \
-    && chromium_bin="$(find /root/.cache/ms-playwright/chromium-* -name chrome -type f | head -1)" \
-    && printf '#!/bin/sh\nexec "%s" --no-sandbox "$@"\n' "$chromium_bin" > /usr/local/bin/chromium-browser \
+    && printf '#!/bin/sh\nexec "$(find /root/.cache/ms-playwright/chromium-* -name chrome -type f | head -1)" --no-sandbox "$@"\n' > /usr/local/bin/chromium-browser \
     && chmod +x /usr/local/bin/chromium-browser
 
 ENV DISPLAY=:99 \
