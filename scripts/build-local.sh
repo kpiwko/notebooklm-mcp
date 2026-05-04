@@ -2,9 +2,9 @@
 # Build the container image locally using RHSM activation key secrets.
 #
 # One-time setup:
-#   mkdir -p ~/.rhsm && chmod 700 ~/.rhsm
-#   printf "YOUR_ORG_ID"       > ~/.rhsm/org  && chmod 600 ~/.rhsm/org
-#   printf "YOUR_ACTIVATION_KEY" > ~/.rhsm/key && chmod 600 ~/.rhsm/key
+#   mkdir -p ~/.config/rhsm && chmod 700 ~/.config/rhsm
+#   printf "YOUR_ORG_ID"       > ~/.config/rhsm/org  && chmod 600 ~/.config/rhsm/org
+#   printf "YOUR_ACTIVATION_KEY" > ~/.config/rhsm/key && chmod 600 ~/.config/rhsm/key
 # Org ID and activation keys: https://console.redhat.com/insights/connector/activation-keys
 
 set -euo pipefail
@@ -12,15 +12,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-RHSM_ORG_FILE="${HOME}/.rhsm/org"
-RHSM_KEY_FILE="${HOME}/.rhsm/key"
+RHSM_ORG_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/rhsm/org"
+RHSM_KEY_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/rhsm/key"
 
 if [[ ! -f "$RHSM_ORG_FILE" ]] || [[ ! -f "$RHSM_KEY_FILE" ]]; then
   echo "ERROR: RHSM credentials not found."
   echo "Create them with:"
-  echo "  mkdir -p ~/.rhsm && chmod 700 ~/.rhsm"
-  echo "  printf 'YOUR_ORG_ID' > ~/.rhsm/org && chmod 600 ~/.rhsm/org"
-  echo "  printf 'YOUR_ACTIVATION_KEY' > ~/.rhsm/key && chmod 600 ~/.rhsm/key"
+  echo "  mkdir -p ~/.config/rhsm && chmod 700 ~/.config/rhsm"
+  echo "  printf 'YOUR_ORG_ID' > ~/.config/rhsm/org && chmod 600 ~/.config/rhsm/org"
+  echo "  printf 'YOUR_ACTIVATION_KEY' > ~/.config/rhsm/key && chmod 600 ~/.config/rhsm/key"
   exit 1
 fi
 

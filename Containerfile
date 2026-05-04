@@ -37,16 +37,20 @@ RUN --mount=type=secret,id=rhsm_org \
 ENV HOME=/root
 
 RUN pip install --upgrade pip uv \
-    && uv tool install notebooklm-mcp-cli==0.6.3 \
+    && uv tool install --python python3.12 notebooklm-mcp-cli==0.6.3 \
     && pip install playwright \
     && playwright install chromium \
-    && pip uninstall -y playwright
+    && pip uninstall -y playwright \
+    && chromium_bin="$(find /root/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)" \
+    && printf '#!/bin/sh\nexec "%s" --no-sandbox "$@"\n' "$chromium_bin" > /usr/local/bin/chromium-browser \
+    && chmod +x /usr/local/bin/chromium-browser
 
 ENV DISPLAY=:99 \
     PATH="/root/.local/bin:$PATH" \
-    NOTEBOOKLM_MCP_HOST=0.0.0.0
+    NOTEBOOKLM_MCP_HOST=0.0.0.0 \
+    NOTEBOOKLM_MCP_CLI_PATH=/root/.config/notebooklm-mcp-cli
 
-VOLUME ["/root/.notebooklm-mcp-cli"]
+VOLUME ["/root/.config/notebooklm-mcp-cli"]
 
 EXPOSE 17200 6080
 

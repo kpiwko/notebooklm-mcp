@@ -20,7 +20,7 @@ inside the container's virtual browser.
 podman run -d --name notebooklm-mcp \
   -p 17200:17200 \
   -p 6080:6080 \
-  -v ~/.notebooklm-mcp-cli:/root/.notebooklm-mcp-cli \
+  -v "${XDG_CONFIG_HOME:-$HOME/.config}/notebooklm-mcp-cli:/root/.config/notebooklm-mcp-cli" \
   ghcr.io/kpiwko/notebooklm-mcp:latest
 
 # 2. Open the VNC interface in your browser
@@ -37,7 +37,7 @@ curl -s http://localhost:17200/mcp \
   --max-time 5
 ```
 
-Credentials are saved to `~/.notebooklm-mcp-cli/` on the host and survive container restarts.
+Credentials are saved to `~/.config/notebooklm-mcp-cli/` on the host and survive container restarts.
 
 ## Cookie refresh
 
@@ -64,7 +64,7 @@ notebooklm-mcp:
     - "17200:17200"
     - "6080:6080"
   volumes:
-    - /Users/kpiwko/.notebooklm-mcp-cli:/root/.notebooklm-mcp-cli
+    - /Users/kpiwko/.config/notebooklm-mcp-cli:/root/.config/notebooklm-mcp-cli
   restart: unless-stopped
 ```
 
@@ -74,9 +74,9 @@ Requires a RHEL subscription (passed through automatically by Podman Desktop's R
 Store activation key credentials for CI-style builds:
 
 ```bash
-mkdir -p ~/.rhsm && chmod 700 ~/.rhsm
-echo "your-org-id" > ~/.rhsm/org && chmod 600 ~/.rhsm/org
-echo "your-activation-key" > ~/.rhsm/key && chmod 600 ~/.rhsm/key
+mkdir -p ~/.config/rhsm && chmod 700 ~/.config/rhsm
+echo "your-org-id" > ~/.config/rhsm/org && chmod 600 ~/.config/rhsm/org
+echo "your-activation-key" > ~/.config/rhsm/key && chmod 600 ~/.config/rhsm/key
 ./scripts/build-local.sh
 ```
 
