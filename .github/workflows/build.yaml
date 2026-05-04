@@ -5,9 +5,20 @@ on:
     branches: [main]
     tags: ['v*']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -25,6 +36,41 @@ jobs:
           username: ${{ secrets.RH_REGISTRY_USER }}
           password: ${{ secrets.RH_REGISTRY_TOKEN }}
 
+      - name: Build image
+        id: build
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: notebooklm-mcp
+          tags: ${{ github.sha }}-${{ matrix.arch }}
+          containerfiles: ./Containerfile
+          platforms: linux/${{ matrix.arch }}
+          # RHSM_ORG and RHSM_KEY passed as build secrets for optional subscription-manager
+          # registration inside the RUN layer. Currently all packages install from
+          # UBI AppStream + EPEL without registration, so these are a no-op but kept
+          # for future packages that may require AppStream access.
+          extra-args: |
+            --secret id=rhsm_org,env=RHSM_ORG
+            --secret id=rhsm_key,env=RHSM_KEY
+        env:
+          RHSM_ORG: ${{ secrets.RHSM_ORG }}
+          RHSM_KEY: ${{ secrets.RHSM_KEY }}
+
+      - name: Push per-arch image
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build.outputs.image }}
+          tags: ${{ steps.build.outputs.tags }}
+          registry: ghcr.io/${{ github.repository_owner }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+
+    steps:
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -32,30 +78,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
+      - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/kpiwko/notebooklm-mcp
+          images: ghcr.io/${{ github.repository_owner }}/notebooklm-mcp
           tags: |
-            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
             type=sha,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
 
-      # RHSM_ORG = organization ID from https://console.redhat.com/insights/connector/activation-keys
-      # RHSM_KEY = activation key name from the same page
-      # These are passed as build secrets so subscription-manager can register inside the RUN layer
-      # if needed. Currently all packages install from UBI AppStream + EPEL without registration,
-      # so these are a no-op but kept for future packages that may require AppStream access.
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Containerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          secrets: |
-            rhsm_org=${{ secrets.RHSM_ORG }}
-            rhsm_key=${{ secrets.RHSM_KEY }}
+      - name: Create and push multi-arch manifest
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/notebooklm-mcp"
+          while IFS= read -r tag; do
+            docker buildx imagetools create \
+              -t "$tag" \
+              "${IMAGE}:${{ github.sha }}-amd64" \
+              "${IMAGE}:${{ github.sha }}-arm64"
+          done <<< "${{ steps.meta.outputs.tags }}"
