@@ -17,7 +17,7 @@ RUN --mount=type=secret,id=rhsm_org \
     if [ -f /run/secrets/rhsm_org ]; then \
       subscription-manager register \
         --org=$(cat /run/secrets/rhsm_org) \
-        --activationkey=$(cat /run/secrets/rhsm_key); \
+        --activationkey=$(cat /run/secrets/rhsm_key) || true; \
     fi \
     && dnf install -y \
       https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
@@ -29,7 +29,7 @@ RUN --mount=type=secret,id=rhsm_org \
       libXtst libcanberra-gtk3 libdrm libgcc libstdc++ libxcb \
       libxkbcommon libxshmfence libxslt mesa-libgbm nspr nss \
       nss-util pango zlib \
-    && subscription-manager unregister 2>/dev/null || true \
+    && (subscription-manager unregister 2>/dev/null || true) \
     && dnf clean all && rm -rf /var/cache/dnf
 
 # Set HOME explicitly — the UBI9 python-312 base image carries HOME=/opt/app-root/src
@@ -43,7 +43,8 @@ RUN pip install --upgrade pip uv \
     && pip uninstall -y playwright
 
 ENV DISPLAY=:99 \
-    PATH="/root/.local/bin:$PATH"
+    PATH="/root/.local/bin:$PATH" \
+    NOTEBOOKLM_MCP_HOST=0.0.0.0
 
 VOLUME ["/root/.notebooklm-mcp-cli"]
 
