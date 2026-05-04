@@ -7,15 +7,17 @@ LABEL name="notebooklm-mcp" \
 
 USER root
 
-# Conditionally register RHEL subscription if secrets are provided (CI path).
-# Locally, Podman Desktop's RHEL podman machine passes the host subscription through automatically.
+# Conditionally register RHEL subscription via activation key if secrets are provided.
+# Local builds: pass --secret id=rhsm_org,src=<file> --secret id=rhsm_key,src=<file>
+# CI builds: RHSM_ORG and RHSM_KEY repository secrets (see .github/workflows/build.yaml)
+# Registry pull (registry.redhat.io) uses a separate service account token — unrelated to these secrets.
 # EPEL provides x11vnc and noVNC (websockify); xorg-x11-server-Xvfb and xorg-x11-utils from AppStream.
-RUN --mount=type=secret,id=rh_username \
-    --mount=type=secret,id=rh_password \
-    if [ -f /run/secrets/rh_username ]; then \
+RUN --mount=type=secret,id=rhsm_org \
+    --mount=type=secret,id=rhsm_key \
+    if [ -f /run/secrets/rhsm_org ]; then \
       subscription-manager register \
-        --username=$(cat /run/secrets/rh_username) \
-        --password=$(cat /run/secrets/rh_password); \
+        --org=$(cat /run/secrets/rhsm_org) \
+        --activationkey=$(cat /run/secrets/rhsm_key); \
     fi \
     && dnf install -y \
       https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
@@ -29,6 +31,10 @@ RUN --mount=type=secret,id=rh_username \
       nss-util pango zlib \
     && subscription-manager unregister 2>/dev/null || true \
     && dnf clean all && rm -rf /var/cache/dnf
+
+# Set HOME explicitly — the UBI9 python-312 base image carries HOME=/opt/app-root/src
+# in its environment; without this override uv installs to the wrong directory.
+ENV HOME=/root
 
 RUN pip install --upgrade pip uv \
     && uv tool install notebooklm-mcp-cli==0.6.1 \
