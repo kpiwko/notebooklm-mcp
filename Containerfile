@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:41
+FROM registry.redhat.io/ubi9/python-312:latest
 
 LABEL name="notebooklm-mcp" \
       summary="NotebookLM MCP Server" \
@@ -7,24 +7,34 @@ LABEL name="notebooklm-mcp" \
 
 USER root
 
-# Install Python 3.12 and all system deps (Xvfb, noVNC, x11vnc, Chromium libs)
-RUN dnf install -y \
-    python3.12 \
-    xorg-x11-server-Xvfb x11vnc novnc xdpyinfo \
-    alsa-lib at-spi2-atk at-spi2-core atk cairo cups-libs \
-    dbus-libs expat flac-libs gdk-pixbuf2 glib2 glibc gtk3 \
-    libX11 libXcomposite libXdamage libXext libXfixes libXrandr \
-    libXtst libcanberra-gtk3 libdrm libgcc libstdc++ libxcb \
-    libxkbcommon libxshmfence libxslt mesa-libgbm nspr nss \
-    nss-util pango zlib \
+# Conditionally register RHEL subscription if secrets are provided (CI path).
+# Locally, Podman Desktop's RHEL podman machine passes the host subscription through automatically.
+# EPEL provides x11vnc and noVNC (websockify); xorg-x11-server-Xvfb and xorg-x11-utils from AppStream.
+RUN --mount=type=secret,id=rh_username \
+    --mount=type=secret,id=rh_password \
+    if [ -f /run/secrets/rh_username ]; then \
+      subscription-manager register \
+        --username=$(cat /run/secrets/rh_username) \
+        --password=$(cat /run/secrets/rh_password); \
+    fi \
+    && dnf install -y \
+      https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf install -y \
+      xorg-x11-server-Xvfb x11vnc novnc xorg-x11-utils \
+      alsa-lib at-spi2-atk at-spi2-core atk cairo cups-libs \
+      dbus-libs expat flac-libs gdk-pixbuf2 glib2 glibc gtk3 \
+      libX11 libXcomposite libXdamage libXext libXfixes libXrandr \
+      libXtst libcanberra-gtk3 libdrm libgcc libstdc++ libxcb \
+      libxkbcommon libxshmfence libxslt mesa-libgbm nspr nss \
+      nss-util pango zlib \
+    && subscription-manager unregister 2>/dev/null || true \
     && dnf clean all && rm -rf /var/cache/dnf
 
-RUN python3.12 -m ensurepip --upgrade \
-    && python3.12 -m pip install --upgrade pip uv \
+RUN pip install --upgrade pip uv \
     && uv tool install notebooklm-mcp-cli==0.6.1 \
-    && python3.12 -m pip install playwright \
+    && pip install playwright \
     && playwright install --only-shell chromium \
-    && python3.12 -m pip uninstall -y playwright
+    && pip uninstall -y playwright
 
 ENV DISPLAY=:99 \
     PATH="/root/.local/bin:$PATH"
