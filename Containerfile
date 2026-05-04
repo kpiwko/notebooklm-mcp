@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/python-312:latest
+FROM registry.fedoraproject.org/fedora:41
 
 LABEL name="notebooklm-mcp" \
       summary="NotebookLM MCP Server" \
@@ -7,11 +7,10 @@ LABEL name="notebooklm-mcp" \
 
 USER root
 
-# EPEL provides x11vnc and noVNC (pulls in websockify); Chromium system deps below
+# Install Python 3.12 and all system deps (Xvfb, noVNC, x11vnc, Chromium libs)
 RUN dnf install -y \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
-    && dnf install -y \
-    xorg-x11-server-Xvfb x11vnc novnc xorg-x11-utils \
+    python3.12 \
+    xorg-x11-server-Xvfb x11vnc novnc xdpyinfo \
     alsa-lib at-spi2-atk at-spi2-core atk cairo cups-libs \
     dbus-libs expat flac-libs gdk-pixbuf2 glib2 glibc gtk3 \
     libX11 libXcomposite libXdamage libXext libXfixes libXrandr \
@@ -20,11 +19,12 @@ RUN dnf install -y \
     nss-util pango zlib \
     && dnf clean all && rm -rf /var/cache/dnf
 
-RUN pip install --upgrade pip uv \
+RUN python3.12 -m ensurepip --upgrade \
+    && python3.12 -m pip install --upgrade pip uv \
     && uv tool install notebooklm-mcp-cli==0.6.1 \
-    && pip install playwright \
+    && python3.12 -m pip install playwright \
     && playwright install --only-shell chromium \
-    && pip uninstall -y playwright
+    && python3.12 -m pip uninstall -y playwright
 
 ENV DISPLAY=:99 \
     PATH="/root/.local/bin:$PATH"
