@@ -2,21 +2,30 @@
 
 ## Local container builds
 
-The Podman machine is arm64 native (Apple HV, no Rosetta). `podman build` without
-`--platform` produces arm64 by default — no flag needed.
+Build for your native platform — do not force `--platform`:
 
-If you see this warning at the FROM step:
+```bash
+podman build -t localhost/notebooklm-mcp:dev .
+```
+
+Podman and Docker default to the host's native architecture. Forcing a non-native
+platform (e.g. `--platform linux/amd64` on arm64) runs under emulation and is slower
+and can cause build failures.
+
+If you see a warning like:
 ```
 WARNING: image platform (linux/amd64) does not match the expected platform (linux/arm64)
 ```
-the base image cache is contaminated with an amd64 pull. Fix it before building:
+the base image is stale in the local cache. Refresh it before building:
 ```bash
-podman pull --platform linux/arm64 registry.redhat.io/ubi9/python-312:latest
+podman pull registry.redhat.io/ubi9/python-312:latest
 ```
-
-Never add `--platform linux/amd64` to local build commands.
 
 ## CI
 
-CI builds natively: amd64 on `ubuntu-24.04`, arm64 on `ubuntu-24.04-arm`. The manifest
-job combines them into a multi-arch image at `ghcr.io/kpiwko/notebooklm-mcp`.
+CI builds on native runners for each architecture and combines them into a multi-arch
+manifest:
+- `ubuntu-24.04` → amd64
+- `ubuntu-24.04-arm` → arm64
+
+The published image at `ghcr.io/kpiwko/notebooklm-mcp` supports both architectures.
