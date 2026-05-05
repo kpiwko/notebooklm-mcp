@@ -8,7 +8,7 @@ as an HTTP MCP server with a browser-based auth interface via noVNC.
 | Port | Purpose |
 |------|---------|
 | 17200 | MCP HTTP endpoint (`/mcp`) |
-| 6080 | noVNC web interface (auth only) |
+| 17201 | noVNC web interface (auth only) |
 
 ## First-run auth
 
@@ -19,12 +19,12 @@ inside the container's virtual browser.
 # 1. Start the container
 podman run -d --name notebooklm-mcp \
   -p 17200:17200 \
-  -p 6080:6080 \
+  -p 17201:6080 \
   -v "${XDG_CONFIG_HOME:-$HOME/.config}/notebooklm-mcp-cli:/root/.config/notebooklm-mcp-cli" \
   ghcr.io/kpiwko/notebooklm-mcp:latest
 
 # 2. Open the VNC interface in your browser
-open http://localhost:6080/vnc.html
+open http://localhost:17201/vnc.html
 
 # 3. In a second terminal, start the login flow
 podman exec -it notebooklm-mcp nlm login
@@ -44,7 +44,7 @@ Credentials are saved to `~/.config/notebooklm-mcp-cli/` on the host and survive
 Google session cookies expire every few weeks. When you see auth errors, repeat the login:
 
 ```bash
-open http://localhost:6080/vnc.html
+open http://localhost:17201/vnc.html
 podman exec -it notebooklm-mcp nlm login
 ```
 
@@ -62,7 +62,7 @@ notebooklm-mcp:
   networks: [ai-stack]
   ports:
     - "17200:17200"
-    - "6080:6080"
+    - "17201:6080"
   volumes:
     - /Users/kpiwko/.config/notebooklm-mcp-cli:/root/.config/notebooklm-mcp-cli
   restart: unless-stopped

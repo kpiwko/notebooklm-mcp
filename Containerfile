@@ -51,7 +51,7 @@ ENV DISPLAY=:99 \
 
 VOLUME ["/root/.config/notebooklm-mcp-cli"]
 
-EXPOSE 17200 6080
+EXPOSE 17200 17201
 
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
