@@ -37,7 +37,7 @@ RUN --mount=type=secret,id=rhsm_org \
 ENV HOME=/root
 
 RUN pip install --upgrade pip uv \
-    && uv tool install --python python3.12 notebooklm-mcp-cli==0.6.3 \
+    && uv tool install --python python3.12 notebooklm-mcp-cli==0.8.8 \
     && pip install playwright \
     && playwright install chromium \
     && pip uninstall -y playwright \
@@ -48,6 +48,12 @@ ENV DISPLAY=:99 \
     PATH="/root/.local/bin:$PATH" \
     NOTEBOOKLM_MCP_HOST=0.0.0.0 \
     NOTEBOOKLM_MCP_CLI_PATH=/root/.config/notebooklm-mcp-cli
+
+# notebooklm-mcp-cli >=0.6.13 refuses to bind to a non-loopback address unless this
+# is set — required here because binding 0.0.0.0 is what makes podman's port
+# publishing (-p 17200:17200) reach the process at all. Restrict exposure by
+# publishing the host port to 127.0.0.1 instead (e.g. -p 127.0.0.1:17200:17200).
+ENV NOTEBOOKLM_ALLOW_EXTERNAL_BIND=1
 
 VOLUME ["/root/.config/notebooklm-mcp-cli"]
 
