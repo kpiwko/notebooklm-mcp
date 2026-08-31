@@ -37,7 +37,7 @@ RUN --mount=type=secret,id=rhsm_org \
 ENV HOME=/root
 
 RUN pip install --upgrade pip uv \
-    && uv tool install --python python3.12 notebooklm-mcp-cli==0.8.8 \
+    && uv tool install --python python3.12 notebooklm-mcp-cli==0.10.0 \
     && pip install playwright \
     && playwright install chromium \
     && pip uninstall -y playwright \
